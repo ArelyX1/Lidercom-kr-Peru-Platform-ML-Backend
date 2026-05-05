@@ -1,7 +1,0 @@
-[package]
-name = "jam_keygen"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-sp-core = "40.0.0"
