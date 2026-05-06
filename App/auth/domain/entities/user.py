@@ -10,5 +10,8 @@ class User:
     document_id: str
     email: str
     password_hash: str
+    seed_hash: str
+    salt: str
+    phrase_hash: str
     boundarie_id: Optional[str] = None
     is_active: bool = True

@@ -3,11 +3,11 @@ use argon2::{
     Argon2, PasswordHasher
 };
 use aes_gcm::{Aes256Gcm, aead::{KeyInit, Aead}, Nonce};
-use rand::RngExt;
+use rand::{RngExt, rng};
 
 
 pub fn derive_key(master_password: &str, salt: &str) -> [u8; 32] {
-    let mut config = Argon2::default();
+    let config = Argon2::default();
     let mut key = [0u8; 32];
     
     let salt_bytes = salt.as_bytes();
@@ -18,25 +18,34 @@ pub fn derive_key(master_password: &str, salt: &str) -> [u8; 32] {
     key
 }
 
-pub fn encrypt_data(plaintext: &[u8], master_pass: &str) -> Vec<u8> {
-    let key = derive_key(master_pass, "perripopo");
-    let cipher = Aes256Gcm::new(&key.into());
+pub fn encrypt_data(content: &[u8], master_pass: &[u8; 32]) -> Vec<u8> {
+    let cipher = Aes256Gcm::new(master_pass.into());
 
     let mut nonce_bytes = [0u8; 12];
-    rand::rng().fill(&mut nonce_bytes);
+    rng().fill(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
     
-    let ciphertext = cipher.encrypt(nonce, plaintext).expect("Cifrado fallido");
+    let ciphertext = cipher.encrypt(nonce, content).expect("Cifrado fallido");
 
     [nonce_bytes.as_slice(), &ciphertext].concat()
 }
 
-pub fn decrypt_data(ciphertext: &[u8], master_pass: &str) -> Vec<u8> {
-    let key = derive_key(master_pass, "perripopo");
-    let cipher = Aes256Gcm::new(&key.into());
+pub fn decrypt_data(ciphertext: &[u8], key: &[u8; 32]) -> Result<Vec<u8>, aes_gcm::Error> {
+    let cipher = Aes256Gcm::new(key.into());
 
-    let (nonce_bytes, ciphertext) = ciphertext.split_at(12);
+    if ciphertext.len() < 12 {
+        return Err(aes_gcm::Error);
+    }
+
+    let (nonce_bytes, actual_ciphertext) = ciphertext.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
 
-    cipher.decrypt(nonce, ciphertext).expect("Descifrado fallido")
+    cipher.decrypt(nonce, actual_ciphertext)
+}
+
+pub fn generate_random_salt() -> String {
+    let mut salt_bytes = [0u8; 16];
+    // Usamos rng() aquí también para consistencia
+    rng().fill(&mut salt_bytes);
+    hex::encode(salt_bytes)
 }
