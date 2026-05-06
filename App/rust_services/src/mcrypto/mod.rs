@@ -30,3 +30,13 @@ pub fn encrypt_data(plaintext: &[u8], master_pass: &str) -> Vec<u8> {
 
     [nonce_bytes.as_slice(), &ciphertext].concat()
 }
+
+pub fn decrypt_data(ciphertext: &[u8], master_pass: &str) -> Vec<u8> {
+    let key = derive_key(master_pass, "perripopo");
+    let cipher = Aes256Gcm::new(&key.into());
+
+    let (nonce_bytes, ciphertext) = ciphertext.split_at(12);
+    let nonce = Nonce::from_slice(nonce_bytes);
+
+    cipher.decrypt(nonce, ciphertext).expect("Descifrado fallido")
+}

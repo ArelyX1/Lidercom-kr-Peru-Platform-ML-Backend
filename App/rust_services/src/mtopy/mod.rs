@@ -1,4 +1,8 @@
-use argon2::password_hash;
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+pub mod validate_identity;
 
 use super::mblockchain;
 use super::mcrypto;
@@ -10,8 +14,9 @@ pub fn register() {
     let master_key = mcrypto::derive_key(secret, "poteto_teto");
 
     let wallet = mblockchain::wallet_gen::gen_wallet().1.into_bytes();
-    let encrypted_wallet = mcrypto::encrypt_data(&wallet, secret);
+    let encrypted_wallet = mcrypto::encrypt_data(&wallet, &master_key);
 
-
+    let is_valid = validate_identity::wallet_conformance(&wallet, &encrypted_wallet, secret);
     println!("Encrypted wallet: {:?}", encrypted_wallet);
+    println!("Is same: {}", is_valid);
 }
