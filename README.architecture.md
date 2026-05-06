@@ -1,3 +1,8 @@
+---
+Owner: ArelyXl
+Description: Documentación técnica de arquitectura del proyecto Lidercom KR Peru Platform, detallando los patrones Hexagonal y Screaming Architecture, estructura de módulos, flujos de datos, integración de tecnologías (GraphQL, Redis, Celery, Rust) y registros de decisiones de arquitectura (ADR).
+---
+
 # Architecture Documentation - Lidercom KR Peru Platform
 
 ## Table of Contents
