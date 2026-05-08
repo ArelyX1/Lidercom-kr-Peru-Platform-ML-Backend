@@ -1,16 +1,22 @@
-# Godot 4+ specific ignores
-.godot/
-.nomedia
+# Environment files
+.env
+.env.*
 
-# Godot-specific ignores
-.import/
-export.cfg
-export_credentials.cfg
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.egg
 
-# Imported translations (automatically generated from CSV files)
-*.translation
+# Rust
+target/
 
-# Mono-specific ignores
-.mono/
-data_*/
-mono_crash.*.json
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
