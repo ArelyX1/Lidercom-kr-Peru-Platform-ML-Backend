@@ -413,6 +413,7 @@ dependencies = [
  "argon2",
  "chrono",
  "hex",
+ "parity-scale-codec",
  "rand 0.10.1",
  "serde",
  "serde_json",

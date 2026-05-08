@@ -13,3 +13,4 @@ serde_json = "1.0.149"
 sp-core = "40.0.0"
 tokio = { version = "1.52.1", features = ["full"] }
 hex = "0.4.3"
+parity-scale-codec = "3.7.5"
