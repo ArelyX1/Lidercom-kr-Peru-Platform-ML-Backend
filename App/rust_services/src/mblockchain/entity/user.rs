@@ -5,6 +5,9 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 
+use crate::mcrypto;
+
+
 // Estructura para el estado que JAM almacenará
 #[derive(Encode, Decode)]
 pub struct UserAccount {
@@ -37,6 +40,12 @@ impl RoleConfig {
     pub fn is_superior_role(&self, role_id: u32, superior_role: u32) -> bool {
         role_id < superior_role
     }   
+}
+
+pub fn get_phrase_from_wallet(wallet: Vec<u8>, password: &str, salt: &str) -> String {
+    let wallet_decrypted = mcrypto::decrypt_data(&wallet, &mcrypto::derive_key(password, salt));
+    String::from_utf8(wallet_decrypted.unwrap()).expect("Invalid UTF-8")
+
 }
 
 pub fn assign_role_in_jam(

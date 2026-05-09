@@ -1,3 +1,4 @@
+
 use argon2::password_hash;
 use sp_core::Pair;
 use sp_core::sr25519;
@@ -33,6 +34,8 @@ pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, String) {
 
     let wallet_info = mblockchain::wallet_gen::gen_wallet();
 
+    println!("seed info {:?}", wallet_info.2 );
+
     let pair_pub = wallet_info.0.public();
 
 
@@ -47,7 +50,7 @@ pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, String) {
     //println!("Pair_pub: {:?}", pair_pub);
     //println!("seed: {:?}", seed);
     //println!("Encrypted seed: {:?}", encrypted_seed);
-
+    println!("Phrase: {}", mnemonic_phrase);
     let encrypted_pair_pub = mcrypto::encrypt_data(pair_pub.as_ref(), &master_key);
     //let is_valid = validate_identity::crypto_conformance(&mnemonic_phrase_bytes, &encrypted_phrase, &master_key);
     //println!("Encrypted phrase: {:?}", encrypted_phrase);
