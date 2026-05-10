@@ -49,3 +49,7 @@ pub fn generate_random_salt() -> String {
     rng().fill(&mut salt_bytes);
     hex::encode(salt_bytes)
 }
+
+pub fn decrypt_to_string(vec_data: Vec<u8>) -> String {
+    String::from_utf8(vec_data).unwrap_or_else(|_| "Error converting to string".into())
+}

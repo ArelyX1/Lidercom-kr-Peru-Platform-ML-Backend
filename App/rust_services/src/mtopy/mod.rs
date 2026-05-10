@@ -13,7 +13,7 @@ use parity_scale_codec::Encode;
 use super::mblockchain;
 use super::mcrypto;
 
-pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, String) {
+pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, String) {
     println!("Registering user...");
 
     let usr_salt_obj = mcrypto::generate_random_salt(); 
@@ -34,30 +34,22 @@ pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, String) {
 
     let wallet_info = mblockchain::wallet_gen::gen_wallet();
 
-    println!("seed info {:?}", wallet_info.2 );
-
-    let pair_pub = wallet_info.0.public();
-
-
-
-    // Phrase para recuperar la cuenta
-    //ToDO: almacenarlo en la DB encriptado 
-    let mnemonic_phrase = wallet_info.1; // Esto es el String
+    let pair = wallet_info.0;
+    let mnemonic_phrase = wallet_info.1;
     let mnemonic_phrase_bytes = mnemonic_phrase.as_bytes();
-
     let seed = wallet_info.2;
+    let pair_bytes = pair.to_raw_vec();
+
     let encrypted_seed = mcrypto::encrypt_data(&seed, &master_key);
-    //println!("Pair_pub: {:?}", pair_pub);
-    //println!("seed: {:?}", seed);
-    //println!("Encrypted seed: {:?}", encrypted_seed);
-    println!("Phrase: {}", mnemonic_phrase);
-    let encrypted_pair_pub = mcrypto::encrypt_data(pair_pub.as_ref(), &master_key);
+    let encrypted_pair = mcrypto::encrypt_data(&pair_bytes, &master_key);
+    let encrypted_phrase = mcrypto::encrypt_data(mnemonic_phrase_bytes, &master_key);
+
     //let is_valid = validate_identity::crypto_conformance(&mnemonic_phrase_bytes, &encrypted_phrase, &master_key);
     //println!("Encrypted phrase: {:?}", encrypted_phrase);
     //println!("Decrypted phrase: {:?}", mcrypto::decrypt_data(&encrypted_phrase, &master_key).unwrap());
     //println!("Original phrase: {:?}", mnemonic_phrase);
     //println!("Is same: {}", is_valid);
-    (psswrd_hash, encrypted_seed, encrypted_pair_pub, usr_salt_obj)
+    (psswrd_hash, encrypted_seed, encrypted_pair, encrypted_phrase, usr_salt_obj)
 }
 
 
@@ -69,3 +61,10 @@ pub fn assign_role (target_wallet: &[u8], key: &[u8; 32], new_role: Vec<u32>, no
     
     mblockchain::entity::user::assign_role_in_jam(target_wallet_typed, new_role, nonce, &pair_typed)
 }
+
+
+
+
+
+
+
