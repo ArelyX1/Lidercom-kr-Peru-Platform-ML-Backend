@@ -1,7 +1,12 @@
 [package]
-name = "auth_service"
+name = "rust_services"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
+
+[lib]
+name = "rust_services"
+crate-type = ["cdylib"]
 
 [dependencies]
 aes-gcm = "0.10.3"
@@ -14,3 +19,4 @@ sp-core = "40.0.0"
 tokio = { version = "1.52.1", features = ["full"] }
 hex = "0.4.3"
 parity-scale-codec = "3.7.5"
+pyo3 = "0.28.3"
