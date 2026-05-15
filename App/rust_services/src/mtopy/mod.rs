@@ -13,7 +13,7 @@ use parity_scale_codec::Encode;
 use super::mblockchain;
 use super::mcrypto;
 
-pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, String) {
+pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, String) {
     println!("Registering user...");
 
     let usr_salt_obj = mcrypto::generate_random_salt(); 
@@ -49,7 +49,7 @@ pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, String) {
     //println!("Decrypted phrase: {:?}", mcrypto::decrypt_data(&encrypted_phrase, &master_key).unwrap());
     //println!("Original phrase: {:?}", mnemonic_phrase);
     //println!("Is same: {}", is_valid);
-    (psswrd_hash, encrypted_seed, encrypted_pair, encrypted_phrase, usr_salt_obj)
+    (psswrd_hash, encrypted_phrase, usr_salt_obj)
 }
 
 

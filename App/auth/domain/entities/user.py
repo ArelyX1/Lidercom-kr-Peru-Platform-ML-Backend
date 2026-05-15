@@ -4,6 +4,8 @@ Description: Contiene la definición de la entidad User como un dataclass, que r
 """
 from dataclasses import dataclass
 from typing import Optional
+import rust_services as rs
+
 
 @dataclass
 class User:
@@ -11,7 +13,8 @@ class User:
     email: str
     password_hash: str
     seed_hash: str
-    salt: str
     phrase_hash: str
+    crypto_pair: str
+    salt: str
     boundarie_id: Optional[str] = None
     is_active: bool = True
