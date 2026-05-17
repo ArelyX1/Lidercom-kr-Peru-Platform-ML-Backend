@@ -8,14 +8,14 @@ class BoundarieService(BoundarieInputPort):
     def __init__(self, boundarie_repo: BoundarieRepositoryPort):
         self._boundarie_repo = boundarie_repo
 
-    async def get_countries(self) -> List[Boundarie]:
-        return await self._boundarie_repo.get_unique_countries()
+    async def get_geo1(self) -> List[Boundarie]:
+        return await self._boundarie_repo.get_geo1()
 
-    async def get_regions(self, country_gid: str) -> List[Boundarie]:
-        return await self._boundarie_repo.get_regions_by_country(country_gid)
+    async def get_geo2(self, geo1_id: int) -> List[Boundarie]:
+        return await self._boundarie_repo.get_geo2_by_geo1(geo1_id)
 
-    async def get_provinces(self, region_gid: str) -> List[Boundarie]:
-        return await self._boundarie_repo.get_provinces_by_region(region_gid)
+    async def get_geo3(self, geo2_id: int) -> List[Boundarie]:
+        return await self._boundarie_repo.get_geo3_by_geo2(geo2_id)
 
-    async def get_districts(self, province_gid: str) -> List[Boundarie]:
-        return await self._boundarie_repo.get_districts_by_province(province_gid)
+    async def get_geo4(self, geo3_id: int) -> List[Boundarie]:
+        return await self._boundarie_repo.get_geo4_by_geo3(geo3_id)

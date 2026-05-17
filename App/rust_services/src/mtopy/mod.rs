@@ -2,6 +2,7 @@
 use argon2::password_hash;
 use sp_core::Pair;
 use sp_core::sr25519;
+use sp_core::crypto::Ss58Codec;
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -13,7 +14,7 @@ use parity_scale_codec::Encode;
 use super::mblockchain;
 use super::mcrypto;
 
-pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, String) {
+pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, String, String) {
     println!("Registering user...");
 
     let usr_salt_obj = mcrypto::generate_random_salt(); 
@@ -49,9 +50,19 @@ pub fn register(psswrd: &str) -> (Vec<u8>, Vec<u8>, String) {
     //println!("Decrypted phrase: {:?}", mcrypto::decrypt_data(&encrypted_phrase, &master_key).unwrap());
     //println!("Original phrase: {:?}", mnemonic_phrase);
     //println!("Is same: {}", is_valid);
-    (psswrd_hash, encrypted_phrase, usr_salt_obj)
+    let public_key = pair.public().to_ss58check();
+    (psswrd_hash, encrypted_phrase, usr_salt_obj, public_key)
 }
 
+
+pub fn ok_password(encrypted_password: &[u8], salt: &str, plain_password: &str) -> bool {
+    let key = mcrypto::derive_key(plain_password, salt);
+    if let Ok(decrypted) = mcrypto::decrypt_data(encrypted_password, &key) {
+        decrypted == plain_password.as_bytes()
+    } else {
+        false
+    }
+}
 
 pub fn assign_role (target_wallet: &[u8], key: &[u8; 32], new_role: Vec<u32>, nonce: u64, pair: &[u8]) -> Vec<u8> {
     let target_wallet_bytes = mcrypto::decrypt_data(target_wallet, key).expect("Failed to decrypt target wallet");
