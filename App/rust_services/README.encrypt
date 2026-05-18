@@ -1,0 +1,500 @@
+================================================================================
+                        README.encrypt
+            SISTEMA DE CIFRADO — RUST_SERVICES (LIDERCOM)
+================================================================================
+
+ÍNDICE
+  1. ARQUITECTURA GENERAL
+  2. DERIVACIÓN DE CLAVES (Argon2id)
+  3. CIFRADO SIMÉTRICO (AES-256-GCM)
+  4. ESQUEMA DE ALMACENAMIENTO
+  5. FLUJO DE REGISTRO
+  6. FLUJO DE VERIFICACIÓN
+  7. CIFRADO DE WALLETS SUBSTRATE
+  8. FIRMAS SR25519 Y JAM
+  9. CONFORMIDAD CRIPTOGRÁFICA
+ 10. CONSIDERACIONES DE SEGURIDAD
+ 11. REFERENCIAS A LAS CRATES
+
+================================================================================
+1. ARQUITECTURA GENERAL
+================================================================================
+
+El sistema emplea un esquema de dos capas criptográficas anidadas:
+
+  Capa 1 — KDF (Argon2id)
+    Convierte una contraseña humana (password) + un salt aleatorio de 16 bytes
+    en una clave simétrica de 256 bits (32 bytes) mediante un algoritmo
+    intencionalmente lento y resistente a ataques con hardware especializado
+    (GPU/ASIC/FPGA).
+
+  Capa 2 — Cifrado simétrico autenticado (AES-256-GCM)
+    Toma la clave derivada en la Capa 1 y cifra los datos con AES en modo
+    Galois/Counter (GCM), que proporciona confidencialidad E integridad
+    (AEAD: Authenticated Encryption with Associated Data).
+
+JAMÁS se almacena la clave derivada en disco o base de datos. Solo existe en
+memoria durante la operación y se destruye al salir de scope en Rust.
+
+Adicionalmente, el sistema genera wallets Substrate (sr25519) y cifra los
+tres componentes críticos de la wallet (seed, pair bytes, mnemonic phrase)
+con la misma clave derivada, de modo que todo queda protegido por una sola
+contraseña maestra.
+
+================================================================================
+2. DERIVACIÓN DE CLAVES — Argon2id (mcrypto::derive_key)
+================================================================================
+
+Archivo: src/mcrypto/mod.rs
+Firma:   pub fn derive_key(master_password: &str, salt: &str) -> [u8; 32]
+
+2.1  ¿Qué es Argon2?
+
+Argon2 es el ganador del Password Hashing Competition (PHC) de 2015. Es un
+algoritmo de derivación de claves (KDF) diseñado específicamente para ser
+resistente a ataques de fuerza bruta con hardware especializado.
+
+Existen tres variantes:
+  - Argon2d:  resistente a side-channel timing. Prioriza resistencia GPU.
+  - Argon2i:  resistente a side-channel por datos. Prioriza seguridad contra
+              ataques de timing en la memoria.
+  - Argon2id: mezcla de ambos (recomendación oficial). Usa el enfoque de
+              Argon2i en la primera pasada y Argon2d en las siguientes.
+
+Nosotros usamos Argon2::default(), que corresponde a Argon2id con los
+parámetros por defecto:
+
+  - Tiempo (t_cost):  3 iteraciones
+  - Memoria (m_cost): 64 MiB (65536 KiB)
+  - Paralelismo (p):  4 hilos
+  - Salida:           32 bytes (256 bits)
+
+2.2  Insumos (inputs)
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  master_password: &str   → contraseña del usuario (UTF-8) │
+  │  salt: &str              → salt hexadecimal de 16 bytes   │
+  │                                                            │
+  │  ↓ Convertidos a &[u8] (raw bytes)                        │
+  └─────────────────────────────────────────────────────────┘
+
+2.3  Proceso
+
+  let config = Argon2::default();
+  let mut key = [0u8; 32];
+  config.hash_password_into(
+      master_password.as_bytes(),   // password
+      salt_bytes,                    // salt (raw bytes)
+      &mut key                       // output buffer de 32 bytes
+  ).expect("Error derivando clave");
+
+Internamente, hash_password_into ejecuta el algoritmo Blake2b en modo
+iterativo sobre una matriz de memoria pseudo-aleatoria. Cada iteración
+sobreescribe la matriz, forzando al atacante a dedicar una cantidad fija
+de memoria y tiempo por cada intento de contraseña.
+
+2.4  Salida
+
+Un arreglo [u8; 32] (256 bits) que se usará EXCLUSIVAMENTE como clave
+para AES-256-GCM. No es un hash de contraseña almacenable; es una clave
+simétrica efímera.
+
+2.5  Salt (mcrypto::generate_random_salt)
+
+  pub fn generate_random_salt() -> String {
+      let mut salt_bytes = [0u8; 16];
+      rng().fill(&mut salt_bytes);        // rand::RngExt -> rellena con
+                                           // entropía del sistema (getrandom)
+      hex::encode(salt_bytes)             // Representación hex string
+  }
+
+Propiedades del salt:
+  - 16 bytes (128 bits) de entropía criptográfica
+  - Generado con rand::rng() que en Linux usa getrandom() syscall → /dev/urandom
+  - Único por usuario (se almacena en texto claro junto al ciphertext)
+  - Garantiza que dos usuarios con la misma contraseña TENGAN claves derivadas
+    completamente diferentes
+  - Previene ataques con tablas rainbow y de precomputación
+
+================================================================================
+3. CIFRADO SIMÉTRICO — AES-256-GCM (mcrypto::encrypt_data / decrypt_data)
+================================================================================
+
+3.1  ¿Qué es AES-256-GCM?
+
+  - AES (Advanced Encryption Standard): cifrado por bloques de 128 bits.
+  - AES-256: variante con clave de 256 bits (14 rondas de transformación).
+  - GCM (Galois/Counter Mode): modo de operación que combina el cifrado en
+    contador (CTR) con un código de autenticación GHASH polinomial en el
+    cuerpo GF(2¹²⁸). Esto proporciona:
+      * Confidencialidad (no se puede leer el mensaje sin la clave)
+      * Integridad (no se puede modificar el ciphertext sin ser detectado)
+      * Autenticación (el ciphertext fue generado por quien posee la clave)
+
+3.2  Nonce (vector de inicialización)
+
+  let mut nonce_bytes = [0u8; 12];       // 96 bits (recomendación NIST)
+  rng().fill(&mut nonce_bytes);          // entropía criptográfica
+  let nonce = Nonce::from_slice(&nonce_bytes);
+
+  - 12 bytes generados aleatoriamente con getrandom() (Linux)
+  - NUNCA debe reutilizarse el mismo (nonce, clave) para dos mensajes
+    distintos. Si se reutiliza, GCM revela el XOR de los mensajes y permite
+    recuperar el GHASH → colapso total de seguridad.
+  - Con 12 bytes aleatorios, la probabilidad de colisión es despreciable
+    (~2⁻⁹⁶ por par de mensajes).
+
+3.3  Cifrado (encrypt_data)
+
+  let ciphertext = cipher.encrypt(nonce, content)
+      .expect("Cifrado fallido");
+
+  1. AES-256 cifra un contador de 128 bits (nonce || counter) para generar
+     un keystream.
+  2. El keystream se XORea con el plaintext → ciphertext.
+  3. Simultáneamente, GHASH procesa el ciphertext y produce un authentication
+     tag de 128 bits (16 bytes) que se concatena al final.
+  El trait Aead::encrypt devuelve ciphertext || tag en un solo Vec<u8>.
+
+3.4  Formato del output de encrypt_data
+
+  [nonce (12 bytes)] [ciphertext (N bytes)] [tag (16 bytes)]
+
+  No se usa Associated Data (AAD) en la implementación actual, pero GCM lo
+  soporta (datos adicionales que se autentican pero no se cifran).
+
+3.5  Descifrado (decrypt_data)
+
+  1. Se validan los primeros 12 bytes como nonce.
+  2. Se divide: nonce_bytes, actual_ciphertext = ciphertext.split_at(12).
+  3. Se llama cipher.decrypt(nonce, actual_ciphertext).
+  4. Internamente GCM:
+     a. Recalcula GHASH sobre el ciphertext recibido
+     b. Compara el tag calculado con el tag adjunto
+     c. Si coinciden → descifra con AES-CTR y devuelve el plaintext
+     d. Si NO coinciden → retorna Err (integridad violada)
+  Esto significa que decrypt_data NUNCA devuelve datos inválidos o
+  manipulados. Si la clave es incorrecta o los datos fueron alterados,
+  falla con aes_gcm::Error.
+
+3.6  Seguridad del tag
+
+  El tag de 128 bits (16 bytes) hace que la probabilidad de forjar un
+  ciphertext válido sea de 2⁻¹²⁸ por intento. Si se detecta un tag inválido,
+  GCM DEJA de descifrar (no produce output parcial). Esto elimina ataques
+  de padding oracle.
+
+================================================================================
+4. ESQUEMA DE ALMACENAMIENTO
+================================================================================
+
+NUNCA se almacena: la clave maestra derivada (master_key).
+
+SÍ se almacena en la base de datos (o devuelve al backend):
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │ Campo                 │ Tipo      │ Contenido                            │
+  ├──────────────────────────────────────────────────────────────────────────┤
+  │ psswrd_hash           │ Vec<u8>   │ nonce(12) + ciphertext(psswrd) + tag│
+  │ encrypted_phrase      │ Vec<u8>   │ nonce(12) + ciphertext(mnemonic)+tag│
+  │ usr_salt              │ String    │ salt hex (16 bytes → 32 chars hex)   │
+  │ public_key            │ String    │ dirección SS58 (Substrate)           │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+La encrypted_seed y encrypted_pair se generan durante el registro pero
+actualmente no se persisten en el esquema; se usarían para funcionalidades
+de recuperación o firma.
+
+================================================================================
+5. FLUJO DE REGISTRO (mtopy::register)
+================================================================================
+
+  Entrada: password (&str)
+  Salida:  (psswrd_hash, encrypted_phrase, usr_salt, public_key)
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ 1. salt = generate_random_salt()  ← 16 bytes de entropía           │
+  │ 2. master_key = derive_key(password, salt)  ← Argon2id             │
+  │ 3. psswrd_hash = encrypt_data(password.as_bytes(), &master_key)    │
+  │ 4. test_decrypt = decrypt_data(&psswrd_hash, &master_key)          │
+  │    (verifica que el cifrado sea correcto ANTES de continuar)       │
+  │ 5. crypto_conformance(password, psswrd_hash, master_key)           │
+  │    (doble verificación programática)                               │
+  │ 6. (pair, mnemonic, seed) = wallet_gen::gen_wallet()               │
+  │    ↑ genera par sr25519 con frase mnemotécnica BIP-39 (12 palabras)│
+  │ 7. encrypted_seed   = encrypt_data(&seed, &master_key)             │
+  │ 8. encrypted_pair   = encrypt_data(&pair_bytes, &master_key)       │
+  │ 9. encrypted_phrase = encrypt_data(&mnemonic, &master_key)         │
+  │10. public_key = pair.public().to_ss58check()  ← addr Substrate     │
+  │11. retorna (psswrd_hash, encrypted_phrase, salt, public_key)       │
+  └─────────────────────────────────────────────────────────────────────┘
+
+Detalles críticos:
+
+  - La contraseña se cifra a sí misma. Esto permite verificar la contraseña
+    más tarde: se vuelve a derivar la clave con el salt almacenado, se
+    descifra psswrd_hash y se compara con la contraseña ingresada.
+
+  - Los componentes de la wallet (seed de 32 bytes, pair de 64 bytes,
+    frase mnemotécnica) se cifran individualmente con AES-256-GCM usando
+    la MISMA master_key. Como GCM genera un nonce aleatorio cada vez, los
+    tres ciphertexts son diferentes aunque los plaintexts estén relacionados.
+
+================================================================================
+6. FLUJO DE VERIFICACIÓN (mtopy::ok_password)
+================================================================================
+
+  Entrada: encrypted_password (&[u8]), salt (&str), plain_password (&str)
+  Salida:  bool
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ 1. key = derive_key(plain_password, salt)                          │
+  │ 2. decrypt_data(encrypted_password, &key)                          │
+  │    a. Si falla (aes_gcm::Error) → contraseña incorrecta → false    │
+  │    b. Si descifra → compara bytes con plain_password.as_bytes()    │
+  │ 3. Retorna true si son iguales, false en cualquier otro caso       │
+  └─────────────────────────────────────────────────────────────────────┘
+
+Nota importante: el paso 2a falla en DOS escenarios:
+  - Contraseña incorrecta (clave derivada no coincide)
+  - Ciphertext manipulado (tag GHASH no verifica)
+Ambos se tratan como "contraseña inválida", lo cual es correcto desde la
+perspectiva del usuario.
+
+================================================================================
+7. CIFRADO DE WALLETS SUBSTRATE
+================================================================================
+
+7.1  Generación de wallet (wallet_gen::gen_wallet)
+
+  use sp_core::sr25519::Pair;
+  Pair::generate_with_phrase(None)
+
+  Internamente:
+  1. Genera 256 bits aleatorios (seed) con rand::OsRng
+  2. Deriva la clave privada escalar en el grupo de Curve25519 (curva de
+     Edwards) a través del esquema de firma Schnorrkel/Ristretto (sr25519)
+  3. Deriva la clave pública: punto en Ristretto (compressed, 32 bytes)
+  4. Genera frase BIP-39 de 12 palabras a partir de la semilla
+  5. Devuelve: (Pair { secreto: [u8; 64], público: [u8; 32] }, frase, seed)
+
+7.2  Cifrado de componentes
+
+  Los tres componentes se cifran por separado con AES-256-GCM:
+
+  encrypted_seed   = AES-256-GCM(seed)        →  12B nonce + ciphertext(32B) + tag(16B) = 60B
+  encrypted_pair   = AES-256-GCM(pair_bytes)  →  12B nonce + ciphertext(64B) + tag(16B) = 92B
+  encrypted_phrase = AES-256-GCM(mnemonic)    →  12B nonce + ciphertext(~128B) + tag(16B)
+
+  Cada uno usa su PROPIO nonce aleatorio de 12 bytes.
+
+  Esto significa que aunque un atacante obtenga acceso a la base de datos,
+  sin la contraseña del usuario y su salt no puede derivar la clave maestra
+  y por tanto no puede recuperar NINGUNO de los componentes de la wallet.
+
+7.3  Recuperación (assign_role en mtopy)
+
+  assign_role descifra el target_wallet y pair con la clave maestra, luego
+  reconstruye el par sr25519 con Pair::from_seed_slice. Esto permite firmar
+  transacciones en nombre del usuario SIN almacenar la clave privada en
+  texto claro.
+
+================================================================================
+8. FIRMAS SR25519 Y JAM
+================================================================================
+
+8.1  Esquema de firma sr25519
+
+  Basado en Schnorrkel (Schnorr sobre el grupo Ristretto de Curve25519).
+  Propiedades:
+    - No maleable (a diferencia de ECDSA)
+    - Soporta firma por lotes (batch verification)
+    - Tamaño de firma: 64 bytes
+    - Tamaño de clave pública: 32 bytes (compressed Ristretto point)
+
+8.2  Firma de payloads JAM (assign_role_in_jam)
+
+  pub fn assign_role_in_jam(
+      target_wallet: sr25519::Public,
+      new_role: Vec<u32>,
+      nonce: u64,
+      admin_pair: &sr25519::Pair
+  ) -> Vec<u8>
+
+  Proceso:
+  1. Codifica (target_wallet || new_role || nonce) con SCALE codec
+     (parity-scale-codec). SCALE es un formato de codificación binario
+     compacto usado por Substrate.
+  2. Firma el payload codificado con sr25519::Pair::sign().
+     Internamente:
+       a. Genera un nonce de firma (nonce de firma Schnorr, no confundir
+          con el nonce de GCM) usando la clave privada + entropía adicional
+       b. Computa el compromiso: R = r * G (punto en Ristretto)
+       c. Computa el desafío: e = H(R || A || mensaje), donde A es la clave
+          pública y H es un hash (STROBE-512 basado en Keccak)
+       d. Computa la respuesta: s = r + e * a (donde a es la clave privada)
+       e. Firma = (R, s) empaquetado en 64 bytes
+  3. Concatena payload || signature (64 bytes)
+
+8.3  Verificación (test.rs)
+
+  Cualquier nodo JAM puede verificar:
+  1. Separar los últimos 64 bytes → signature
+  2. El resto → payload
+  3. sr25519::Pair::verify(&signature, &payload, &public_key)
+  4. Internamente verifica: s*G == R + e*A
+
+  Si la verificación pasa, el mensaje es auténtico y no fue alterado.
+
+================================================================================
+9. CONFORMIDAD CRIPTOGRÁFICA (validate_identity::crypto_conformance)
+================================================================================
+
+  pub fn crypto_conformance(
+      plain_content: &[u8],
+      encrypted_data: &[u8],
+      master_pass: &[u8; 32]
+  ) -> bool
+
+  Propósito: verificar que un ciphertext descifra correctamente al plaintext
+  esperado. Es una doble validación usada durante el registro para asegurar
+  que el pipeline completo (derivar → cifrar → descifrar) sea correcto.
+
+  Flujo interno:
+  1. decrypt_data(encrypted_data, master_pass)
+  2. Compara el resultado byte a byte con plain_content
+  3. Si no hay error en decrypt_data (tag verifica) Y son iguales → true
+
+  Esto detectaría:
+    - Una mutación accidental de los datos ANTES de cifrar
+    - Un error en la implementación del KDF o el cifrado
+    - Corrupción de memoria que altere los parámetros
+
+================================================================================
+10. CONSIDERACIONES DE SEGURIDAD
+================================================================================
+
+10.1  Fortaleza de Argon2id (default)
+
+  - 64 MiB de memoria por derivación
+  - 3 pases sobre la memoria
+  - 4 hilos en paralelo
+  - Esto significa que un atacante con una RTX 4090 (teóricamente capaz de
+    miles de millones de hashes SHA-256 por segundo) solo puede probar
+    ~8 contraseñas/segundo para una sola derivación Argon2id con estos
+    parámetros.
+
+10.2  Nonce único por mensaje
+
+  AES-256-GCM con nonce de 12 bytes: límite de ~2³² mensajes con la misma
+  clave antes de que la probabilidad de colisión de nonce sea apreciable.
+  En este sistema cada "sesión" deriva una nueva clave maestra (porque la
+  contraseña y el salt producen SIEMPRE la misma clave), pero cada mensaje
+  individual (contraseña, seed, pair, frase) usa nonces independientes.
+
+10.3  Almacenamiento de claves
+
+  La master_key JAMÁS se persiste. Existe como variable local en el stack
+  de Rust y se destruye al salir de la función. En el caso de register,
+  la clave se pasa a mcrypto::encrypt_data y se descarta.
+
+10.4  Segregación de responsabilidades
+
+  - Argon2: resiste fuerza bruta sobre la contraseña
+  - AES-256-GCM: protege los datos en reposo con autenticación
+  - sr25519: firma transacciones JAM con integridad y no repudio
+  - SCALE codec: serialización canónica para evitar ambigüedades en la firma
+
+10.5  Suposiciones y riesgos
+
+  - La seguridad del sistema depende de la fortaleza de la contraseña del
+    usuario. Argon2 mitiga contraseñas débiles pero no las elimina.
+  - Los parámetros de Argon2 (default de la crate argon2 0.5.3) son
+    adecuados para 2025-2026. Deberían revisarse periódicamente.
+  - getrandom() en Linux usa getrandom() syscall que bloquea si el CRNG
+    (Continuous Random Number Generator) no está inicializado. En la
+    práctica, esto solo ocurre en los primeros segundos de arranque del
+    sistema.
+  - La crate aes-gcm 0.10.3 usa AES-NI en CPUs compatibles, que es
+    resistente a ataques de timing (implementación en tiempo constante).
+
+================================================================================
+11. REFERENCIAS A LAS CRATES
+================================================================================
+
+  Crate           Versión    Propósito
+  ─────────────────────────────────────────────────────────────────────
+  argon2          0.5.3      KDF: Argon2id (password → key de 256 bits)
+  aes-gcm         0.10.3     Cifrado AEAD: AES-256-GCM (nonce 12B + tag 16B)
+  rand            0.10.1     RNG criptográfico (getrandom syscall)
+  hex             0.4.3      Codificación hex del salt y otros datos
+  sp-core         40.0.0     sr25519: Pair, Sign, Verify + SS58 addresses
+  parity-scale-codec 3.7.5   Codificación binaria SCALE (Substrate)
+  serde           1.0.228    Serialización JSON (config de roles)
+  serde_json      1.0.149    Parseo de JSON (roles.json)
+
+  Dependencias indirectas relevantes:
+  - blake2 (usado por Argon2 internamente)
+  - aead (trait para cifrado autenticado)
+  - schnorrkel (implementación subyacente de sr25519)
+  - getrandom (proveedor de entropía del SO)
+
+================================================================================
+ANEXO A — Diagrama de flujo de datos (registro)
+
+  Usuario
+    │
+    ├─ password: "MiClaveSegura123"
+    │
+    ▼
+  mcrypto::generate_random_salt()
+    │
+    ├─ salt: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"  (16 bytes → hex)
+    │
+    ▼
+  mcrypto::derive_key(password, salt)  ──── Argon2id ────►  master_key [u8; 32]
+    │
+    ├──────────────────────────────────────────────────────────┐
+    │    │                    │                    │           │
+    ▼    ▼                    ▼                    ▼           ▼
+  encrypt  encrypt        encrypt            encrypt      wallet_gen::
+  (psswrd) (seed)         (pair)             (phrase)     gen_wallet()
+    │      │              │                  │               │
+    ▼      ▼              ▼                  ▼               ▼
+  psswrd  enc_seed      enc_pair           enc_phrase     (pair, mnemonic, seed)
+  _hash                                                      │
+    │                                                       SS58
+    │                                                       encode
+    │                                                       │
+    ▼                                                       ▼
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  Retorno: (psswrd_hash, enc_phrase, salt, public_key)            │
+  │           (seed y pair se cifran pero pueden no persistirse)     │
+  └──────────────────────────────────────────────────────────────────┘
+
+================================================================================
+ANEXO B — Diagrama de verificación de contraseña (ok_password)
+
+  Usuario
+    │
+    ├─ plain_password: "MiClaveSegura123"
+    ├─ salt:           (desde DB)
+    ├─ enc_password:   (desde DB)
+    │
+    ▼
+  mcrypto::derive_key(plain_password, salt)  ──── Argon2id ────►  key
+    │
+    ▼
+  mcrypto::decrypt_data(enc_password, &key)  ──── AES-256-GCM ──►  Ok(plaintext) | Err
+    │                                                              │
+    │  Ok(plaintext)                                              Err
+    │    │                                                         │
+    │    ▼                                                         ▼
+    │  plaintext == plain_password.as_bytes() ?                  false
+    │    │                    │
+    │   true                 false
+    │    │                    │
+    ▼    ▼                    ▼
+  return true             return false
+
+================================================================================
