@@ -2,12 +2,9 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String, Boolean
-from sqlalchemy.orm import declarative_base
 from identification_type.ports.driven.identification_type_repository_port import IdentificationTypeRepositoryPort
 from identification_type.domain.entities.identification_type import IdentificationType
-
-
-Base = declarative_base()
+from db.base import Base
 
 
 class S02IdentificationTypeORM(Base):

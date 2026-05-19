@@ -4,12 +4,9 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base
 from person.ports.driven.person_repository_port import PersonRepositoryPort
 from person.domain.entities.person import Person
-
-
-Base = declarative_base()
+from db.base import Base
 
 
 class S02PersonORM(Base):

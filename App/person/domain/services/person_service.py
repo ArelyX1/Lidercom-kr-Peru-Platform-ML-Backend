@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from person.ports.driving.person_input_port import PersonInputPort
 from person.ports.driven.person_repository_port import PersonRepositoryPort
 from person.domain.entities.person import Person
@@ -10,6 +10,9 @@ class PersonService(PersonInputPort):
 
     async def get_all(self) -> List[Person]:
         return await self._repo.find_all()
+
+    async def find_by_identification_number(self, identification_number: str) -> Optional[Person]:
+        return await self._repo.find_by_identification_number(identification_number)
 
     async def create(self, data: Person) -> Person:
         return await self._repo.save(data)

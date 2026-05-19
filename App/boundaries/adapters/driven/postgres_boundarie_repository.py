@@ -2,12 +2,9 @@ from typing import List
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
 from boundaries.ports.driven.boundarie_repository_port import BoundarieRepositoryPort
 from boundaries.domain.entities.boundarie import Boundarie
-
-
-Base = declarative_base()
+from db.base import Base
 
 
 class S01BoundarieORM(Base):
