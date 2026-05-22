@@ -5,10 +5,11 @@ from boundaries.adapters.driving.graphql.boundarie_resolver import Query as Boun
 from identification_type.adapters.driving.graphql.identification_type_resolver import Query as IdentificationTypeQuery, Mutation as IdentificationTypeMutation
 from person.adapters.driving.graphql.person_resolver import Query as PersonQuery, Mutation as PersonMutation
 from user_account.adapters.driving.graphql.user_account_resolver import Query as UserAccountQuery, Mutation as UserAccountMutation
+from role.adapters.driving.graphql.role_resolver import Query as RoleQuery
 
 
 @strawberry.type
-class RootQuery(AccountProviderQuery, AuthQuery, BoundarieQuery, IdentificationTypeQuery, PersonQuery, UserAccountQuery):
+class RootQuery(AccountProviderQuery, AuthQuery, BoundarieQuery, IdentificationTypeQuery, PersonQuery, UserAccountQuery, RoleQuery):
     pass
 
 

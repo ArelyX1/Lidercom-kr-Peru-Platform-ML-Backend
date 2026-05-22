@@ -15,3 +15,6 @@ class PersonRepositoryPort(ABC):
 
     @abstractmethod
     async def update(self, data: Person) -> Person: ...
+
+    @abstractmethod
+    async def save_person_role(self, n_id_person: str, n_id_role: int) -> None: ...

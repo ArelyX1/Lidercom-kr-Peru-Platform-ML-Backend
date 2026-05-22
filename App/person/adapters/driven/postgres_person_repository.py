@@ -1,9 +1,8 @@
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import select, text, Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 from person.ports.driven.person_repository_port import PersonRepositoryPort
 from person.domain.entities.person import Person
 from db.base import Base
@@ -21,6 +20,14 @@ class S02PersonORM(Base):
     nResidencePlaceGadm = Column("nResidencePlaceGadm", Integer, quote=True)
     tCreatedAt = Column("tcreatedat", DateTime, server_default=text("NOW()"))
     tModifiedAt = Column("tmodifiedat", DateTime)
+
+
+class S02PersonRoleORM(Base):
+    __tablename__ = "S02PERSON_ROLE"
+
+    nIdRole = Column("nidrole", Integer, ForeignKey("S02ROLE.nidrole"), primary_key=True)
+    nIdPerson = Column("nidperson", UUID, ForeignKey("S02PERSON.nidperson"), primary_key=True)
+    tCreatedAt = Column("tcreatedat", DateTime, server_default=text("NOW()"))
 
 
 class PostgresPersonRepository(PersonRepositoryPort):
@@ -50,6 +57,15 @@ class PostgresPersonRepository(PersonRepositoryPort):
         await self._session.commit()
         await self._session.refresh(orm)
         return self._to_entity(orm)
+
+    async def save_person_role(self, n_id_person: str, n_id_role: int) -> None:
+        orm = S02PersonRoleORM(
+            nIdPerson=n_id_person,
+            nIdRole=n_id_role,
+        )
+        self._session.add(orm)
+        await self._session.flush()
+        await self._session.commit()
 
     async def update(self, data: Person) -> Person:
         sql = text("""

@@ -3,6 +3,8 @@ from typing import List
 from person.domain.services.person_service import PersonService
 from person.adapters.driven.postgres_person_repository import PostgresPersonRepository
 from person.domain.entities.person import Person as PersonEntity
+from role.domain.services.role_service import RoleService
+from role.adapters.driven.postgres_role_repository import PostgresRoleRepository
 from db.config import AsyncSessionLocal
 
 
@@ -23,6 +25,7 @@ class Person:
 class CreatePersonInput:
     id_identification_type: int
     identification_number: str
+    role_name: str
 
 
 @strawberry.input
@@ -63,6 +66,12 @@ class Mutation:
     @strawberry.mutation
     async def create_person(self, input: CreatePersonInput) -> Person:
         async with AsyncSessionLocal() as session:
+            role_repo = PostgresRoleRepository(session)
+            role_service = RoleService(role_repo)
+            role = await role_service.find_by_name(input.role_name)
+            if not role:
+                raise ValueError(f"Role '{input.role_name}' not found")
+
             repo = PostgresPersonRepository(session)
             service = PersonService(repo)
             entity = PersonEntity(
@@ -72,6 +81,7 @@ class Mutation:
                 c_identification_number=input.identification_number,
             )
             created = await service.create(entity)
+            await service.assign_role(str(created.n_id_person), role.n_id_role)
             return Person(
                 id=created.n_id_person,
                 name=created.c_name,

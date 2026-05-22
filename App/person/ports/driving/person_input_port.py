@@ -15,3 +15,6 @@ class PersonInputPort(ABC):
 
     @abstractmethod
     async def update_by_identification_number(self, identification_number: str, data: Person) -> Person: ...
+
+    @abstractmethod
+    async def assign_role(self, n_id_person: str, n_id_role: int) -> None: ...

@@ -22,3 +22,6 @@ class PersonService(PersonInputPort):
         if not existing:
             raise ValueError(f"Person with identification number '{identification_number}' not found")
         return await self._repo.update(data)
+
+    async def assign_role(self, n_id_person: str, n_id_role: int) -> None:
+        await self._repo.save_person_role(n_id_person, n_id_role)
