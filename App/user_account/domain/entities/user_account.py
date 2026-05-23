@@ -17,4 +17,5 @@ class UserAccount:
     b_email_verified: Optional[bool] = False
     t_latest_access: Optional[datetime] = None
     created_at: Optional[datetime] = None
+    c_photo_url: str = ""
     b_is_active: Optional[bool] = True

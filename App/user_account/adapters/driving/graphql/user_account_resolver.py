@@ -21,6 +21,7 @@ class UserAccount:
     n_id_account_provider: int | None = None
     email_verified: bool | None = None
     is_active: bool | None = None
+    photo_url: str | None = None
     latest_access: str | None = None
     created_at: str | None = None
 
@@ -34,6 +35,7 @@ class CreateUserInput:
     provider_id: str
     n_id_account_provider: int
     email_verified: bool = False
+    photo_url: str = ""
 
 
 @strawberry.type
@@ -57,6 +59,7 @@ class Query:
                     n_id_account_provider=u.n_id_account_provider,
                     email_verified=u.b_email_verified,
                     is_active=u.b_is_active,
+                    photo_url=u.c_photo_url,
                     latest_access=str(u.t_latest_access) if u.t_latest_access else None,
                     created_at=str(u.created_at) if u.created_at else None,
                 )
@@ -87,6 +90,7 @@ class Mutation:
                 c_provider_id=input.provider_id,
                 n_id_account_provider=input.n_id_account_provider,
                 b_email_verified=input.email_verified,
+                c_photo_url=input.photo_url,
             )
             created = await service.create(entity, password=input.password)
 
@@ -101,6 +105,7 @@ class Mutation:
                 provider_id=created.c_provider_id,
                 n_id_account_provider=created.n_id_account_provider,
                 email_verified=created.b_email_verified,
+                photo_url=created.c_photo_url,
                 is_active=created.b_is_active,
                 latest_access=str(created.t_latest_access) if created.t_latest_access else None,
                 created_at=str(created.created_at) if created.created_at else None,

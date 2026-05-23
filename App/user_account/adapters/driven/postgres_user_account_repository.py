@@ -24,6 +24,7 @@ class S02UserORM(Base):
     bEmailVerified = Column("bemailverified", Boolean)
     tLatestAccess = Column("tlatestaccess", DateTime)
     tCreatedAt = Column("createdat", DateTime, server_default=text("NOW()"))
+    cPhotoUrl = Column("cphotourl", String)
     bIsActive = Column("bisactive", Boolean)
 
 
@@ -48,6 +49,7 @@ class PostgresUserAccountRepository(UserAccountRepositoryPort):
             cProviderId=data.c_provider_id,
             nIdAccountProvider=data.n_id_account_provider,
             bEmailVerified=data.b_email_verified,
+            cPhotoUrl=data.c_photo_url,
             bIsActive=data.b_is_active,
         )
         self._session.add(orm)
@@ -82,5 +84,6 @@ class PostgresUserAccountRepository(UserAccountRepositoryPort):
             b_email_verified=orm.bEmailVerified,
             t_latest_access=orm.tLatestAccess,
             created_at=orm.tCreatedAt,
+            c_photo_url=orm.cPhotoUrl or "",
             b_is_active=orm.bIsActive,
         )
