@@ -32,8 +32,8 @@ class CreateUserInput:
     username: str
     email: str
     password: str
-    provider_id: str
     n_id_account_provider: int
+    provider_id: str = ""
     email_verified: bool = False
     photo_url: str = ""
 
