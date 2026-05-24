@@ -102,8 +102,8 @@ class Mutation:
             repo = PostgresPersonRepository(session)
             service = PersonService(repo)
             entity = PersonEntity(
-                c_name=input.name,
-                c_last_name=input.last_name,
+                c_name=input.name.strip(),
+                c_last_name=input.last_name.strip(),
                 c_identification_number=input.identification_number,
                 n_birth_place_gadm=input.birth_place_gadm,
                 n_residence_place_gadm=input.residence_place_gadm,

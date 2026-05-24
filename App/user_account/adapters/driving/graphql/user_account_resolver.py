@@ -85,7 +85,7 @@ class Mutation:
 
             entity = UserAccountEntity(
                 n_id_user=person.n_id_person,
-                c_username=input.username,
+                c_username=input.username.strip(),
                 c_email=input.email,
                 c_provider_id=input.provider_id,
                 n_id_account_provider=input.n_id_account_provider,
