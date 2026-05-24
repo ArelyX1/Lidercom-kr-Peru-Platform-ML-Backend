@@ -14,3 +14,4 @@ class Person:
     n_residence_place_gadm: Optional[int] = None
     t_created_at: Optional[datetime] = None
     t_modified_at: Optional[datetime] = None
+    role_name: str = ""

@@ -19,6 +19,7 @@ class Person:
     residence_place_gadm: int | None = None
     created_at: str | None = None
     modified_at: str | None = None
+    role: str
 
 
 @strawberry.input
@@ -56,6 +57,7 @@ class Query:
                     residence_place_gadm=p.n_residence_place_gadm,
                     created_at=str(p.t_created_at) if p.t_created_at else None,
                     modified_at=str(p.t_modified_at) if p.t_modified_at else None,
+                    role=p.role_name,
                 )
                 for p in items
             ]
