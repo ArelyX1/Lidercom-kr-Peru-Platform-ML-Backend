@@ -38,6 +38,12 @@ class UpdatePersonInput:
     residence_place_gadm: int
 
 
+@strawberry.input
+class AssignPersonRoleInput:
+    identification_number: str
+    role_name: str
+
+
 @strawberry.type
 class Query:
     @strawberry.field
@@ -144,4 +150,34 @@ class Mutation:
                 created_at=str(updated.t_created_at) if updated.t_created_at else None,
                 modified_at=str(updated.t_modified_at) if updated.t_modified_at else None,
                 role=updated.role_name or "",
+            )
+
+    @strawberry.mutation
+    async def assign_person_role(self, input: AssignPersonRoleInput) -> Person:
+        async with AsyncSessionLocal() as session:
+            role_repo = PostgresRoleRepository(session)
+            role_service = RoleService(role_repo)
+            role = await role_service.find_by_name(input.role_name)
+            if not role:
+                raise ValueError(f"Role '{input.role_name}' not found")
+
+            repo = PostgresPersonRepository(session)
+            service = PersonService(repo)
+            person = await service.find_by_identification_number(input.identification_number)
+            if not person:
+                raise ValueError(f"Person with identification number '{input.identification_number}' not found")
+
+            await service.assign_role(str(person.n_id_person), role.n_id_role)
+
+            return Person(
+                id=person.n_id_person,
+                name=person.c_name,
+                lastName=person.c_last_name,
+                id_identification_type=person.n_id_identification_type,
+                identification_number=person.c_identification_number,
+                birth_place_gadm=person.n_birth_place_gadm,
+                residence_place_gadm=person.n_residence_place_gadm,
+                created_at=str(person.t_created_at) if person.t_created_at else None,
+                modified_at=str(person.t_modified_at) if person.t_modified_at else None,
+                role=role.c_name,
             )
