@@ -12,7 +12,7 @@ from db.config import AsyncSessionLocal
 class Person:
     id: str
     name: str
-    last_name: str
+    lastName: str
     id_identification_type: int
     identification_number: str
     birth_place_gadm: int | None = None
@@ -33,7 +33,7 @@ class CreatePersonInput:
 class UpdatePersonInput:
     identification_number: str
     name: str
-    last_name: str
+    lastName: str
     birth_place_gadm: int
     residence_place_gadm: int
 
@@ -50,7 +50,7 @@ class Query:
                 Person(
                     id=p.n_id_person,
                     name=p.c_name,
-                    last_name=p.c_last_name,
+                    lastName=p.c_last_name,
                     id_identification_type=p.n_id_identification_type,
                     identification_number=p.c_identification_number,
                     birth_place_gadm=p.n_birth_place_gadm,
@@ -62,6 +62,26 @@ class Query:
                 for p in items
             ]
 
+    @strawberry.field
+    async def person(self, identification_number: str) -> Person | None:
+        async with AsyncSessionLocal() as session:
+            repo = PostgresPersonRepository(session)
+            service = PersonService(repo)
+            p = await service.find_by_identification_number(identification_number)
+            if not p:
+                return None
+            return Person(
+                id=p.n_id_person,
+                name=p.c_name,
+                lastName=p.c_last_name,
+                id_identification_type=p.n_id_identification_type,
+                identification_number=p.c_identification_number,
+                birth_place_gadm=p.n_birth_place_gadm,
+                residence_place_gadm=p.n_residence_place_gadm,
+                created_at=str(p.t_created_at) if p.t_created_at else None,
+                modified_at=str(p.t_modified_at) if p.t_modified_at else None,
+                role=p.role_name or "",
+            )
 
 @strawberry.type
 class Mutation:
@@ -87,13 +107,14 @@ class Mutation:
             return Person(
                 id=created.n_id_person,
                 name=created.c_name,
-                last_name=created.c_last_name,
+                lastName=created.c_last_name,
                 id_identification_type=created.n_id_identification_type,
                 identification_number=created.c_identification_number,
                 birth_place_gadm=created.n_birth_place_gadm,
                 residence_place_gadm=created.n_residence_place_gadm,
                 created_at=str(created.t_created_at) if created.t_created_at else None,
                 modified_at=str(created.t_modified_at) if created.t_modified_at else None,
+                role=created.role_name or "",
             )
 
     @strawberry.mutation
@@ -103,7 +124,7 @@ class Mutation:
             service = PersonService(repo)
             entity = PersonEntity(
                 c_name=input.name.strip(),
-                c_last_name=input.last_name.strip(),
+                c_last_name=input.lastName.strip(),
                 c_identification_number=input.identification_number,
                 n_birth_place_gadm=input.birth_place_gadm,
                 n_residence_place_gadm=input.residence_place_gadm,
@@ -115,11 +136,12 @@ class Mutation:
             return Person(
                 id=updated.n_id_person,
                 name=updated.c_name,
-                last_name=updated.c_last_name,
+                lastName=updated.c_last_name,
                 id_identification_type=updated.n_id_identification_type,
                 identification_number=updated.c_identification_number,
                 birth_place_gadm=updated.n_birth_place_gadm,
                 residence_place_gadm=updated.n_residence_place_gadm,
                 created_at=str(updated.t_created_at) if updated.t_created_at else None,
                 modified_at=str(updated.t_modified_at) if updated.t_modified_at else None,
+                role=updated.role_name or "",
             )
