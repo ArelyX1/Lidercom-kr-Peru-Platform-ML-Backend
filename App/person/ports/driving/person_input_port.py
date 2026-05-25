@@ -18,3 +18,6 @@ class PersonInputPort(ABC):
 
     @abstractmethod
     async def assign_role(self, n_id_person: str, n_id_role: int) -> None: ...
+
+    @abstractmethod
+    async def get_person_roles(self, n_id_person: str) -> List[str]: ...

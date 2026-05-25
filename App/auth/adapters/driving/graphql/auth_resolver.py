@@ -1,3 +1,4 @@
+from typing import List
 import strawberry
 from auth.domain.services.auth_service import AuthService
 from person.domain.services.person_service import PersonService
@@ -10,6 +11,7 @@ from db.config import AsyncSessionLocal
 @strawberry.type
 class LoginPayload:
     success: bool
+    roles: List[str]
 
 
 @strawberry.type
@@ -26,4 +28,4 @@ class Mutation:
             user_account_repo = PostgresUserAccountRepository(session)
             service = AuthService(PersonService(person_repo), UserAccountService(user_account_repo))
             result = await service.login(identification_number, password)
-            return LoginPayload(success=result["success"])
+            return LoginPayload(success=result["success"], roles=result.get("roles", []))

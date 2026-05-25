@@ -25,3 +25,6 @@ class PersonService(PersonInputPort):
 
     async def assign_role(self, n_id_person: str, n_id_role: int) -> None:
         await self._repo.save_person_role(n_id_person, n_id_role)
+
+    async def get_person_roles(self, n_id_person: str) -> List[str]:
+        return await self._repo.find_role_names_by_person_id(n_id_person)

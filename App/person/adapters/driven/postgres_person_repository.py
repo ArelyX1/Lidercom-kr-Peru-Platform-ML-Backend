@@ -162,6 +162,16 @@ class PostgresPersonRepository(PersonRepositoryPort):
             n_residence_place_gadm=row[8],
         )
 
+    async def find_role_names_by_person_id(self, n_id_person: str) -> List[str]:
+        sql = text("""
+            SELECT r.cname
+            FROM "S02PERSON_ROLE" pr
+            JOIN "S02ROLE" r ON r.nidrole = pr.nidrole
+            WHERE pr.nidperson = :person_id
+        """)
+        result = await self._session.execute(sql, {"person_id": n_id_person})
+        return [row[0] for row in result.fetchall()]
+
     def _to_entity(self, orm: S02PersonORM) -> Person:
         return Person(
             n_id_person=str(orm.nIdPerson) if orm.nIdPerson else None,

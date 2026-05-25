@@ -18,3 +18,6 @@ class PersonRepositoryPort(ABC):
 
     @abstractmethod
     async def save_person_role(self, n_id_person: str, n_id_role: int) -> None: ...
+
+    @abstractmethod
+    async def find_role_names_by_person_id(self, n_id_person: str) -> List[str]: ...
