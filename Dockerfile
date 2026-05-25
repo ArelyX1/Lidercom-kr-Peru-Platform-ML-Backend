@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r perripopo && useradd -r -g perripopo perripopo
 
 COPY --from=builder /venv /venv
 COPY --from=builder /app /app
@@ -44,7 +44,7 @@ ENV PATH="/venv/bin:${PATH}" \
     APP_PORT=5000
 
 WORKDIR /app
-USER appuser
+USER perripopo
 
 EXPOSE 5000
 

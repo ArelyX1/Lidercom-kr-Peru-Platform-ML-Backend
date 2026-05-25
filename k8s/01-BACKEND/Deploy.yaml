@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lidercom-backend
+  namespace: "2023241041"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lidercom_backend
+  template:
+    metadata:
+      labels:
+        app: lidercom_backend
+    spec:
+      # Bloque para forzar la resolución DNS interna
+      hostAliases:
+      - ip: "10.42.0.243"
+        hostnames:
+        - "psql-service"
+      containers:
+      - name: lidercom-app
+        image: arelyxl/lidercom_backend:v1
+        ports:
+        - containerPort: 5000
+        env:
+        # Variables de conexión a la BD
+        - name: DATABASE_URL
+          value: "postgresql://perripopo:p3rr1p0p0@psql-service:5432/lidercom"
+        - name: DB_HOST
+          value: "psql-service"
+        - name: DB_NAME
+          value: "lidercom"
+        - name: DB_USER
+          value: "perripopo"
+        - name: DB_PASSWORD
+          value: "p3rr1p0p0"
