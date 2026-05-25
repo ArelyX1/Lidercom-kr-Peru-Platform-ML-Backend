@@ -71,10 +71,39 @@ class PostgresPersonRepository(PersonRepositoryPort):
         ]
 
     async def find_by_identification_number(self, identification_number: str) -> Optional[Person]:
-        stmt = select(S02PersonORM).where(S02PersonORM.cIdentificationNumber == identification_number)
-        result = await self._session.execute(stmt)
-        orm = result.scalar_one_or_none()
-        return self._to_entity(orm) if orm else None
+        sql = text("""
+            SELECT
+                p.nidperson,
+                p.cname,
+                p.clastname,
+                p.nididentificationtype,
+                p.cidentificationnumber,
+                p.tcreatedat,
+                p.tmodifiedat,
+                p."nBirthPlaceGadm",
+                p."nResidencePlaceGadm",
+                r.cname AS role_name
+            FROM "S02PERSON" p
+            LEFT JOIN "S02PERSON_ROLE" pr ON pr.nidperson = p.nidperson
+            LEFT JOIN "S02ROLE" r ON r.nidrole = pr.nidrole
+            WHERE p.cidentificationnumber = :identification_number
+        """)
+        result = await self._session.execute(sql, {"identification_number": identification_number})
+        row = result.fetchone()
+        if not row:
+            return None
+        return Person(
+            n_id_person=str(row[0]) if row[0] else None,
+            c_name=row[1],
+            c_last_name=row[2],
+            n_id_identification_type=row[3],
+            c_identification_number=row[4],
+            t_created_at=row[5],
+            t_modified_at=row[6],
+            n_birth_place_gadm=row[7],
+            n_residence_place_gadm=row[8],
+            role_name=row[9] or "",
+        )
 
     async def save(self, data: Person) -> Person:
         orm = S02PersonORM(
