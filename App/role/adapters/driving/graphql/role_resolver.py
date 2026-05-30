@@ -4,7 +4,6 @@ from role.domain.services.role_service import RoleService
 from role.adapters.driven.postgres_role_repository import PostgresRoleRepository
 from db.config import AsyncSessionLocal
 
-
 @strawberry.type
 class Permission:
     id: int

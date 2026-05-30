@@ -1,9 +1,11 @@
 import strawberry
 from typing import List
+from strawberry.types import Info
 from identification_type.domain.services.identification_type_service import IdentificationTypeService
 from identification_type.adapters.driven.postgres_identification_type_repository import PostgresIdentificationTypeRepository
 from identification_type.domain.entities.identification_type import IdentificationType as IdentificationTypeEntity
 from db.config import AsyncSessionLocal
+from auth.adapters.driving.graphql.helpers import enforce_access
 
 
 @strawberry.type
@@ -22,7 +24,8 @@ class IdentificationType:
 @strawberry.type
 class Query:
     @strawberry.field
-    async def identification_types(self) -> List[IdentificationType]:
+    async def identification_types(self, info: Info, token: str) -> List[IdentificationType]:
+        await enforce_access(token, "identification_types")
         async with AsyncSessionLocal() as session:
             repo = PostgresIdentificationTypeRepository(session)
             service = IdentificationTypeService(repo)
@@ -58,7 +61,8 @@ class CreateIdentificationTypeInput:
 @strawberry.type
 class Mutation:
     @strawberry.mutation
-    async def create_identification_type(self, input: CreateIdentificationTypeInput) -> IdentificationType:
+    async def create_identification_type(self, info: Info, token: str, input: CreateIdentificationTypeInput) -> IdentificationType:
+        await enforce_access(token, "create_identification_type")
         async with AsyncSessionLocal() as session:
             repo = PostgresIdentificationTypeRepository(session)
             service = IdentificationTypeService(repo)

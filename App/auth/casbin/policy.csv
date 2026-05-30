@@ -1,0 +1,15 @@
+p, , person
+p, , create_person
+p, , update_person
+p, , assign_person_role
+p, , create_account_provider
+p, , create_identification_type
+p, , identification_types
+p, , create_user
+p, , user_accounts
+p, , logout
+p, , refresh_token
+p, ACCESS_ADMIN_APP, go_admin_page
+p, ACCESS_OBSERVER_APP, go_observer_page
+p, ACCESS_SUPERIOR_APP, go_superior_page
+p, ACCESS_PARTICIPANT_APP, go_participant_page

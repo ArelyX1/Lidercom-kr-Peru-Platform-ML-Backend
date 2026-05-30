@@ -1,4 +1,5 @@
 import strawberry
+from strawberry.schema.config import StrawberryConfig
 from account_provider.adapters.driving.graphql.account_provider_resolver import Query as AccountProviderQuery, Mutation as AccountProviderMutation
 from auth.adapters.driving.graphql.auth_resolver import Query as AuthQuery, Mutation as AuthMutation
 from boundaries.adapters.driving.graphql.boundarie_resolver import Query as BoundarieQuery
@@ -18,4 +19,4 @@ class RootMutation(AccountProviderMutation, AuthMutation, IdentificationTypeMuta
     pass
 
 
-schema = strawberry.Schema(query=RootQuery, mutation=RootMutation)
+schema = strawberry.Schema(query=RootQuery, mutation=RootMutation, config=StrawberryConfig(auto_camel_case=False))

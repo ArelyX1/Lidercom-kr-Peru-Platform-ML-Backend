@@ -1,11 +1,13 @@
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import select, text, Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import select, text, Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from person.ports.driven.person_repository_port import PersonRepositoryPort
 from person.domain.entities.person import Person
 from db.base import Base
+from role.adapters.driven.postgres_role_repository import S02PermissionORM, S02RolePermissionORM
 
 
 class S02PersonORM(Base):
@@ -28,6 +30,36 @@ class S02PersonRoleORM(Base):
     nIdRole = Column("nidrole", Integer, ForeignKey("S02ROLE.nidrole"), primary_key=True)
     nIdPerson = Column("nidperson", UUID, ForeignKey("S02PERSON.nidperson"), primary_key=True)
     tCreatedAt = Column("tcreatedat", DateTime, server_default=text("NOW()"))
+
+
+class S02ParticipantORM(Base):
+    __tablename__ = "S02PARTICIPANT"
+
+    nIdParticipant = Column("nidparticipant", UUID, ForeignKey("S02USER.niduser"), primary_key=True)
+    bIsActive = Column("bisactive", Boolean, default=True)
+
+
+class S02EmployeeORM(Base):
+    __tablename__ = "S02EMPLOYEE"
+
+    nIdEmployee = Column("nidemployee", UUID, ForeignKey("S02USER.niduser"), primary_key=True)
+    bIsActive = Column("bisactive", Boolean, default=True)
+
+
+class S02SuperiorORM(Base):
+    __tablename__ = "S02SUPERIOR"
+
+    nIdSuperior = Column("nidsuperior", UUID, ForeignKey("S02USER.niduser"), primary_key=True)
+    bIsActive = Column("bisactive", Boolean, default=True)
+    tCreatedAt = Column("tcreatedat", DateTime, server_default=text("NOW()"))
+
+
+class S02ParticipantProgramORM(Base):
+    __tablename__ = "S02PARTICIPANT_PROGRAM"
+
+    nIdParticipant = Column("nidparticipant", UUID, ForeignKey("S02PARTICIPANT.nidparticipant"), primary_key=True)
+    nIdProgram = Column("nidprogram", UUID, primary_key=True)
+    bIsActive = Column("bisactive", Boolean, default=True)
 
 
 class PostgresPersonRepository(PersonRepositoryPort):
@@ -118,6 +150,24 @@ class PostgresPersonRepository(PersonRepositoryPort):
         await self._session.refresh(orm)
         return self._to_entity(orm)
 
+    async def save_participant(self, n_id_person: str) -> None:
+        orm = S02ParticipantORM(nIdParticipant=n_id_person)
+        self._session.add(orm)
+        await self._session.flush()
+        await self._session.commit()
+
+    async def save_employee(self, n_id_person: str) -> None:
+        orm = S02EmployeeORM(nIdEmployee=n_id_person)
+        self._session.add(orm)
+        await self._session.flush()
+        await self._session.commit()
+
+    async def save_superior(self, n_id_person: str) -> None:
+        orm = S02SuperiorORM(nIdSuperior=n_id_person)
+        self._session.add(orm)
+        await self._session.flush()
+        await self._session.commit()
+
     async def save_person_role(self, n_id_person: str, n_id_role: int) -> None:
         orm = S02PersonRoleORM(
             nIdPerson=n_id_person,
@@ -171,6 +221,98 @@ class PostgresPersonRepository(PersonRepositoryPort):
         """)
         result = await self._session.execute(sql, {"person_id": n_id_person})
         return [row[0] for row in result.fetchall()]
+
+    async def find_permissions_by_person_id(self, n_id_person: str) -> List[dict]:
+        stmt = (
+            select(S02PermissionORM)
+            .join(S02RolePermissionORM, S02RolePermissionORM.nIdPermission == S02PermissionORM.nIdPermission)
+            .join(S02PersonRoleORM, S02PersonRoleORM.nIdRole == S02RolePermissionORM.nIdRole)
+            .where(S02PersonRoleORM.nIdPerson == n_id_person)
+            .where(S02PermissionORM.bIsActive == True)
+            .distinct()
+        )
+        result = await self._session.execute(stmt)
+        orms = result.scalars().all()
+        return [
+            {
+                "name": p.cName,
+                "code": p.cCode,
+                "module": p.cModule,
+                "description": p.cDescription,
+            }
+            for p in orms
+        ]
+
+    async def save_participant_program(self, n_id_participant: str, n_id_program: str) -> None:
+        orm = S02ParticipantProgramORM(
+            nIdParticipant=n_id_participant,
+            nIdProgram=n_id_program,
+        )
+        self._session.add(orm)
+        await self._session.flush()
+        await self._session.commit()
+
+    async def find_programs_by_participant_id(self, n_id_person: str) -> List[dict]:
+        sql = text("""
+            SELECT
+                p.nidprogram, p.cname, p.cdescription, p.cstatus,
+                p.tstartdate, p.tendtime,
+                w.nidworkshop, w.cdescription AS workshop_description,
+                w.cstatus AS workshop_status, w.tdate
+            FROM "S02PARTICIPANT_PROGRAM" pp
+            JOIN "S01PROGRAM" p ON p.nidprogram = pp.nidprogram
+            LEFT JOIN "S01WORKSHOP" w ON w.nidprogram = p.nidprogram AND w.bisactive = true
+            WHERE pp.nidparticipant = :person_id AND p.bisactive = true
+            ORDER BY p.tstartdate, w.tdate
+        """)
+        result = await self._session.execute(sql, {"person_id": n_id_person})
+        rows = result.fetchall()
+        programs: dict = {}
+        for row in rows:
+            pid = str(row[0])
+            if pid not in programs:
+                programs[pid] = {
+                    "n_id_program": pid,
+                    "c_name": row[1],
+                    "c_description": row[2],
+                    "c_status": row[3],
+                    "t_start_date": str(row[4]) if row[4] else None,
+                    "t_end_time": str(row[5]) if row[5] else None,
+                    "workshops": [],
+                }
+            if row[6]:
+                programs[pid]["workshops"].append({
+                    "n_id_workshop": str(row[6]),
+                    "c_description": row[7],
+                    "c_status": row[8],
+                    "t_date": str(row[9]) if row[9] else None,
+                })
+        return list(programs.values())
+
+    async def find_available_programs(self, n_id_person: str) -> List[dict]:
+        sql = text("""
+            SELECT p.nidprogram, p.cname, p.cdescription, p.cstatus,
+                   p.tstartdate, p.tendtime
+            FROM "S01PROGRAM" p
+            WHERE p.bisactive = true
+              AND p.nidprogram NOT IN (
+                SELECT pp.nidprogram FROM "S02PARTICIPANT_PROGRAM" pp
+                WHERE pp.nidparticipant = :person_id
+              )
+            ORDER BY p.tstartdate
+        """)
+        result = await self._session.execute(sql, {"person_id": n_id_person})
+        return [
+            {
+                "n_id_program": str(row[0]),
+                "c_name": row[1],
+                "c_description": row[2],
+                "c_status": row[3],
+                "t_start_date": str(row[4]) if row[4] else None,
+                "t_end_time": str(row[5]) if row[5] else None,
+            }
+            for row in result.fetchall()
+        ]
 
     def _to_entity(self, orm: S02PersonORM) -> Person:
         return Person(

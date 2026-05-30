@@ -11,6 +11,9 @@ class PersonService(PersonInputPort):
     async def get_all(self) -> List[Person]:
         return await self._repo.find_all()
 
+    async def find_by_id(self, n_id_person: str) -> Optional[Person]:
+        return await self._repo.find_by_id(n_id_person)
+
     async def find_by_identification_number(self, identification_number: str) -> Optional[Person]:
         return await self._repo.find_by_identification_number(identification_number)
 
@@ -23,8 +26,18 @@ class PersonService(PersonInputPort):
             raise ValueError(f"Person with identification number '{identification_number}' not found")
         return await self._repo.update(data)
 
+    async def update_by_id(self, n_id_person: str, data: Person) -> Person:
+        existing = await self._repo.find_by_id(n_id_person)
+        if not existing:
+            raise ValueError(f"Person with id '{n_id_person}' not found")
+        data.n_id_person = n_id_person
+        return await self._repo.update_by_id(data)
+
     async def assign_role(self, n_id_person: str, n_id_role: int) -> None:
         await self._repo.save_person_role(n_id_person, n_id_role)
 
     async def get_person_roles(self, n_id_person: str) -> List[str]:
         return await self._repo.find_role_names_by_person_id(n_id_person)
+
+    async def get_person_permissions(self, n_id_person: str) -> List[dict]:
+        return await self._repo.find_permissions_by_person_id(n_id_person)
