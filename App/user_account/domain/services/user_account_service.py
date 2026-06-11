@@ -25,3 +25,6 @@ class UserAccountService(UserAccountInputPort):
         data.c_salt = salt
         data.c_wallet = wallet
         return await self._repo.save(data)
+
+    async def update_status(self, n_id_user: str, b_is_active: bool) -> None:
+        await self._repo.update_status(n_id_user, b_is_active)

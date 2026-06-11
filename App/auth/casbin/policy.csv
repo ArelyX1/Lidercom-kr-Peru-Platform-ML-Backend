@@ -13,3 +13,11 @@ p, ACCESS_ADMIN_APP, go_admin_page
 p, ACCESS_OBSERVER_APP, go_observer_page
 p, ACCESS_SUPERIOR_APP, go_superior_page
 p, ACCESS_PARTICIPANT_APP, go_participant_page
+p, , persons_by_role
+p, , update_user_status
+p, , remove_person_role
+p, , participants_by_program
+p, , deactivate_participant_program
+p, , activate_participant_program
+p, , create_workshop
+p, , update_workshop_status

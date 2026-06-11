@@ -163,3 +163,24 @@ class Mutation:
                 latest_access=str(created.t_latest_access) if created.t_latest_access else None,
                 created_at=str(created.created_at) if created.created_at else None,
             )
+
+    @strawberry.mutation
+    async def update_user_status(self, token: str, n_id_user: str, b_is_active: bool) -> bool:
+        await enforce_access(token, "update_user_status")
+        async with AsyncSessionLocal() as session:
+            repo = PostgresUserAccountRepository(session)
+            service = UserAccountService(repo)
+            await service.update_status(n_id_user, b_is_active)
+
+            person_repo = PostgresPersonRepository(session)
+            role_names = await person_repo.find_role_names_by_person_id(n_id_user)
+            for role_name in role_names:
+                r = role_name.lower()
+                if r in ("admin", "observer", "papu"):
+                    await person_repo.update_employee_status(n_id_user, b_is_active)
+                elif r == "participant":
+                    await person_repo.update_participant_status(n_id_user, b_is_active)
+                elif r == "superior":
+                    await person_repo.update_superior_status(n_id_user, b_is_active)
+
+            return True

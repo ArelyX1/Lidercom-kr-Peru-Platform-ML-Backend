@@ -15,3 +15,6 @@ class Person:
     t_created_at: Optional[datetime] = None
     t_modified_at: Optional[datetime] = None
     role_name: str = ""
+    c_photo_url: Optional[str] = None
+    c_username: Optional[str] = None
+    c_email: Optional[str] = None

@@ -27,3 +27,6 @@ class PersonInputPort(ABC):
 
     @abstractmethod
     async def get_person_permissions(self, n_id_person: str) -> List[dict]: ...
+
+    @abstractmethod
+    async def find_persons_by_roles(self, role_names: List[str]) -> List[dict]: ...

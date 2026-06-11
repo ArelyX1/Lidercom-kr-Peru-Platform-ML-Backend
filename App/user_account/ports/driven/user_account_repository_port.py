@@ -15,3 +15,6 @@ class UserAccountRepositoryPort(ABC):
 
     @abstractmethod
     async def find_by_id(self, n_id_user: str) -> Optional[UserAccount]: ...
+
+    @abstractmethod
+    async def update_status(self, n_id_user: str, b_is_active: bool) -> None: ...

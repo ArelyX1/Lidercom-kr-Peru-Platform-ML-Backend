@@ -12,3 +12,6 @@ class UserAccountInputPort(ABC):
 
     @abstractmethod
     async def create(self, data: UserAccount, password: str) -> UserAccount: ...
+
+    @abstractmethod
+    async def update_status(self, n_id_user: str, b_is_active: bool) -> None: ...

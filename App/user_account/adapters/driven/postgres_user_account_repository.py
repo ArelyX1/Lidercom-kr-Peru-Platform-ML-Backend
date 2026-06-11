@@ -70,6 +70,19 @@ class PostgresUserAccountRepository(UserAccountRepositoryPort):
         orm = result.scalar_one_or_none()
         return self._to_entity(orm) if orm else None
 
+    async def update_status(self, n_id_user: str, b_is_active: bool) -> None:
+        stmt = (
+            select(S02UserORM)
+            .where(S02UserORM.nIdUser == n_id_user)
+        )
+        result = await self._session.execute(stmt)
+        orm = result.scalar_one_or_none()
+        if not orm:
+            raise ValueError(f"User account with id '{n_id_user}' not found")
+        orm.bIsActive = b_is_active
+        await self._session.flush()
+        await self._session.commit()
+
     def _to_entity(self, orm: S02UserORM) -> UserAccount:
         return UserAccount(
             n_id_user=str(orm.nIdUser) if orm.nIdUser else None,
