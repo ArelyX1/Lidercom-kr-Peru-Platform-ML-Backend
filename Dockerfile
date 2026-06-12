@@ -19,8 +19,7 @@ RUN python -m venv /venv && \
 
 COPY App/ .
 
-RUN /venv/bin/pip install --no-cache-dir maturin && \
-    cd rust_services && \
+RUN cd rust_services && \
     /venv/bin/maturin build --release --out /tmp/wheels && \
     /venv/bin/pip install --no-cache-dir /tmp/wheels/*.whl && \
     rm -rf /app/rust_services/target
@@ -41,7 +40,14 @@ ENV PATH="/venv/bin:${PATH}" \
     PYTHONPATH="/app:${PYTHONPATH}" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    APP_PORT=5000
+    APP_PORT=5000 \
+    DATABASE_URL="postgresql://arelyxl:elmomero123@localhost:5432/lidercom?sslmode=prefer" \
+    REDIS_URL="redis://localhost:6379/0" \
+    PERMISSION_CACHE_TTL_MINUTES=15 \
+    JWT_SECRET_KEY="super-secret-key-change-in-production" \
+    JWT_ALGORITHM=HS256 \
+    ACCESS_TOKEN_EXPIRE_MINUTES=15 \
+    REFRESH_TOKEN_EXPIRE_DAYS=7
 
 WORKDIR /app
 USER perripopo
