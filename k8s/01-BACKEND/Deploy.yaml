@@ -20,7 +20,7 @@ spec:
         - "psql-service"
       containers:
       - name: lidercom-app
-        image: arelyxl/lidercom_backend:v1
+        image: arelyxl/lidercom_backend:v2
         ports:
         - containerPort: 5000
         env:
@@ -35,3 +35,5 @@ spec:
           value: "perripopo"
         - name: DB_PASSWORD
           value: "p3rr1p0p0"
+        - name: REDIS_URL
+          value: "redis://10.43.114.114:6379/0"
