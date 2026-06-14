@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: 2023241041
+...
+  namespace: 2023241041
+type: Opaque
+stringData:
+  token: "eyJhIjoiYjk2ZjE2YTY0ZDc5OTJhN2E2OGJjMmRlYjIxNzc1MTUiLCJ0IjoiZTEzZWVhZTYtMzJiMy00NjNhLThiMDUtYTJhMDk5ZGIyNjk2IiwicyI6Ik9ETTFZbUpqT0RRdE9UQTVaQzAwTkRJeExXSmpPV0l0WTJJMFlURXpOelpoTjJJMiJ9"

@@ -73,6 +73,15 @@ class Metric:
 
 
 @dataclass
+class WorkshopMetric:
+    n_id_metric_workshop: str
+    n_id_metric: str
+    c_name: str
+    c_description: str | None = None
+    c_data_type: str | None = None
+
+
+@dataclass
 class ParticipantMetricEntry:
     n_id_metric_workshop: str
     c_value: str

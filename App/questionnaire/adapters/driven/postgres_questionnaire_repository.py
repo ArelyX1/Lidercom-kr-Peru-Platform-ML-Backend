@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from questionnaire.ports.driven.questionnaire_repository_port import QuestionnaireRepositoryPort
 from questionnaire.domain.entities.questionnaire import (
     WorkshopQuestionnaire, QuestionnaireGroup, Question, AnswerLog, NewQuestion, NewMetric, Metric,
-    ParticipantMetricEntry,
+    ParticipantMetricEntry, WorkshopMetric,
 )
 from questionnaire.domain.rules.questionnaire_rules import get_type_config
 from person.adapters.driven.postgres_person_repository import S01WorkshopORM
@@ -486,6 +486,32 @@ class PostgresQuestionnaireRepository(QuestionnaireRepositoryPort):
         )
         result = await self._session.execute(stmt)
         return [str(row[0]) for row in result.fetchall()]
+
+    async def find_workshop_metrics(self, workshop_id: str) -> List[WorkshopMetric]:
+        sql = text("""
+            SELECT
+                mw.nidmetricworkshop,
+                m.nidmetric,
+                m.cname,
+                m.cdescription,
+                m.cdatatype
+            FROM "S03METRIC_WORKSHOP" mw
+            JOIN "S03METRIC" m ON m.nidmetric = mw.nidmetric AND m.bisactive = true
+            WHERE mw.nidworkshop = :workshop_id
+              AND m.cdatatype ILIKE 'integer'
+            ORDER BY m.cname
+        """)
+        result = await self._session.execute(sql, {"workshop_id": workshop_id})
+        return [
+            WorkshopMetric(
+                n_id_metric_workshop=str(row[0]),
+                n_id_metric=str(row[1]),
+                c_name=row[2],
+                c_description=row[3],
+                c_data_type=row[4],
+            )
+            for row in result.fetchall()
+        ]
 
     async def find_all_metrics(self) -> List[Metric]:
         stmt = select(S03MetricORM).where(S03MetricORM.bIsActive == True)

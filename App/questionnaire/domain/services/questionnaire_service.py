@@ -3,7 +3,7 @@ from questionnaire.ports.driving.questionnaire_input_port import QuestionnaireIn
 from questionnaire.ports.driven.questionnaire_repository_port import QuestionnaireRepositoryPort
 from questionnaire.domain.entities.questionnaire import (
     WorkshopQuestionnaire, QuestionnaireGroup, Question, AnswerLog, NewQuestion, NewMetric, Metric,
-    ParticipantMetricEntry,
+    ParticipantMetricEntry, WorkshopMetric,
 )
 
 
@@ -45,6 +45,9 @@ class QuestionnaireService(QuestionnaireInputPort):
 
     async def get_all_metrics(self) -> List[Metric]:
         return await self._repo.find_all_metrics()
+
+    async def get_workshop_metrics(self, workshop_id: str) -> List[WorkshopMetric]:
+        return await self._repo.find_workshop_metrics(workshop_id)
 
     async def assign_metric_to_workshop(self, metric_id: str, workshop_id: str) -> str:
         return await self._repo.assign_metric_to_workshop(metric_id, workshop_id)

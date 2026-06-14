@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from questionnaire.domain.entities.questionnaire import (
     WorkshopQuestionnaire, QuestionnaireGroup, Question, AnswerLog, NewQuestion, NewMetric, Metric,
-    ParticipantMetricEntry,
+    ParticipantMetricEntry, WorkshopMetric,
 )
 
 
@@ -42,6 +42,9 @@ class QuestionnaireInputPort(ABC):
 
     @abstractmethod
     async def get_all_metrics(self) -> List[Metric]: ...
+
+    @abstractmethod
+    async def get_workshop_metrics(self, workshop_id: str) -> List[WorkshopMetric]: ...
 
     @abstractmethod
     async def get_participant_metrics(

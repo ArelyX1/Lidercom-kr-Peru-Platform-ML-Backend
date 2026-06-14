@@ -17,7 +17,7 @@ class RootQuery(AccountProviderQuery, AuthQuery, BoundarieQuery, IdentificationT
 
 
 @strawberry.type
-class RootMutation(AccountProviderMutation, AuthMutation, IdentificationTypeMutation, PersonMutation, UserAccountMutation):
+class RootMutation(AccountProviderMutation, AuthMutation, IdentificationTypeMutation, PersonMutation, UserAccountMutation, QuestionnaireMutation):
     pass
 
 

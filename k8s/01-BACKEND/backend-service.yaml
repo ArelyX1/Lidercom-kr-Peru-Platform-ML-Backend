@@ -8,6 +8,6 @@ spec:
   selector:
     app: lidercom_backend
   ports:
-    - port: 80         # Puerto interno para que el Ingress lo vea luego
-      targetPort: 5000 # Puerto donde escucha tu App Python
-      nodePort: 30005  # Puerto de acceso externo fijo
+    - port: 5000       # Coincide con el proxy_pass del frontend nginx
+      targetPort: 5000
+      nodePort: 30005

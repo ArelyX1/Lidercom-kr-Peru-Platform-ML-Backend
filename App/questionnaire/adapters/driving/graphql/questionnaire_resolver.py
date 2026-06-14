@@ -124,6 +124,15 @@ class ParticipantMetricEntryType:
 
 
 @strawberry.type
+class WorkshopMetricType:
+    n_id_metric_workshop: str
+    n_id_metric: str
+    c_name: str
+    c_description: str | None = None
+    c_data_type: str | None = None
+
+
+@strawberry.type
 class Query:
     @strawberry.field
     async def workshop_questionnaires(self, program_id: str) -> List[WorkshopQuestionnaireType]:
@@ -300,6 +309,23 @@ class Query:
                     b_is_active=m.b_is_active,
                 )
                 for m in items
+            ]
+
+    @strawberry.field
+    async def workshop_metrics(self, workshop_id: str) -> List[WorkshopMetricType]:
+        async with AsyncSessionLocal() as session:
+            repo = PostgresQuestionnaireRepository(session)
+            service = QuestionnaireService(repo)
+            items = await service.get_workshop_metrics(workshop_id)
+            return [
+                WorkshopMetricType(
+                    n_id_metric_workshop=item.n_id_metric_workshop,
+                    n_id_metric=item.n_id_metric,
+                    c_name=item.c_name,
+                    c_description=item.c_description,
+                    c_data_type=item.c_data_type,
+                )
+                for item in items
             ]
 
 

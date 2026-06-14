@@ -17,7 +17,8 @@ class WildcardStrategy(PermissionStrategy):
     def has_permission(self, user_permissions: List[str], required_permission: str) -> bool:
         if required_permission in user_permissions:
             return True
-        pattern = f"^{re.escape(required_permission).replace(r'\*', '.*')}$"
+        escaped = re.escape(required_permission).replace('\\*', '.*')
+        pattern = f"^{escaped}$"
         for perm in user_permissions:
             if re.match(pattern, perm):
                 return True
