@@ -37,7 +37,7 @@ Unless explicitly authorized in writing by the Licensor, you **SHALL NOT**:
 - **Resell or sublicense:** Rent, lease, or sublicense the Software or any rights herein to any third party.
 - **Misrepresent ownership:** Claim authorship or ownership of the Software or any substantial portion of it.
 - **Remove copyright notices:** Delete, alter, or obscure any copyright notices or license headers in the Software.
-- **Trademark use:** Use the Licensor's name (ArelyXl) or any associated institution (e.g., Caja Inka Sur) for promotional or endorsement purposes without written consent.
+- **Trademark use:** Use the Licensor's name (ArelyXl) or any associated institution for promotional or endorsement purposes without written consent.
 
 ---
 
