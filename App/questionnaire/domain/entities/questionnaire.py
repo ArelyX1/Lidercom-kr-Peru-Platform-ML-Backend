@@ -91,3 +91,4 @@ class ParticipantMetricEntry:
     c_question: str | None = None
     j_alternatives: str | None = None
     questionnaire_type_name: str | None = None
+    t_date: str | None = None

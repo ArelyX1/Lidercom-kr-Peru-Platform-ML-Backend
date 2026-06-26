@@ -19,7 +19,7 @@ spec:
         - "backend-service"
       containers:
       - name: admin-frontend
-        image: arelyxl/lidercom_admin_observer:v2
+        image: arelyxl/lidercom_admin_observer:v3
         imagePullPolicy: Always
         ports:
         - containerPort: 80

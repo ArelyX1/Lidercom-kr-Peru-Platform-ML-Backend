@@ -13,16 +13,9 @@ spec:
       labels:
         app: lidercom_backend
     spec:
-      hostAliases:
-      - ip: "10.42.0.143"
-        hostnames:
-        - "psql-service"
-      - ip: "10.42.0.22"
-        hostnames:
-        - "redis-service"
       containers:
       - name: lidercom-app
-        image: arelyxl/lidercom_backend:v3
+        image: arelyxl/lidercom_backend:v4
         ports:
         - containerPort: 5000
         env:

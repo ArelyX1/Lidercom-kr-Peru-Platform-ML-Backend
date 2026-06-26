@@ -538,19 +538,13 @@ class PostgresQuestionnaireRepository(QuestionnaireRepositoryPort):
                 ml.cvalue,
                 m.cname AS metric_name,
                 m.cdatatype AS metric_data_type,
-                q.nidquestionnaire,
-                q.cquestion,
-                q.jalternatives::text,
-                qt.cname AS questionnaire_type_name
+                ml.tdate::text
             FROM "S03METRIC_LOG" ml
             JOIN "S03METRIC_WORKSHOP" mw ON mw.nidmetricworkshop = ml.nidmetricworkshop
             JOIN "S03METRIC" m ON m.nidmetric = mw.nidmetric AND m.bisactive = true
-            LEFT JOIN "S03QUESTIONNAIRE_GROUP" qg ON qg.nidquestionnairegroup = m.nidquestionnairegroup
-            LEFT JOIN "S03QUESTIONNAIRE" q ON q.nidquestionnairegroup = qg.nidquestionnairegroup
-            LEFT JOIN "S03QUESTIONNAIRE_TYPE" qt ON qt.nidquestionnairetype = q.nidquestionnairetype
             WHERE mw.nidworkshop = :workshop_id
               AND ml.nidparticipant = :participant_id
-            ORDER BY m.cname, q.nidquestionnaire
+            ORDER BY m.cname, ml.tdate
         """)
         result = await self._session.execute(sql, {
             "workshop_id": workshop_id,
@@ -562,10 +556,7 @@ class PostgresQuestionnaireRepository(QuestionnaireRepositoryPort):
                 c_value=row[1] or "",
                 metric_name=row[2] or "",
                 metric_data_type=row[3],
-                n_id_questionnaire=str(row[4]) if row[4] else None,
-                c_question=row[5],
-                j_alternatives=row[6],
-                questionnaire_type_name=row[7],
+                t_date=row[4],
             )
             for row in result.fetchall()
         ]

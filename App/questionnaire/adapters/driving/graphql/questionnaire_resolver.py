@@ -121,6 +121,7 @@ class ParticipantMetricEntryType:
     c_question: str | None = None
     j_alternatives: str | None = None
     questionnaire_type_name: str | None = None
+    t_date: str | None = None
 
 
 @strawberry.type
@@ -289,6 +290,7 @@ class Query:
                     c_question=e.c_question,
                     j_alternatives=e.j_alternatives,
                     questionnaire_type_name=e.questionnaire_type_name,
+                    t_date=e.t_date,
                 )
                 for e in items
             ]
